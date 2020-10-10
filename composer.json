@@ -1,0 +1,11 @@
+{
+    "require": {
+        "workerman/workerman": "^4.0",
+        "bunny/bunny": "^0.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Workerman\\RabbitMQ\\": "src/"
+        }
+    }
+}
