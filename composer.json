@@ -1,4 +1,28 @@
 {
+    "name": "workerman/rabbitmq",
+    "type": "library",
+    "keywords": [
+        "amqp",
+        "rabbitmq client"
+    ],
+    "homepage": "http://www.workerman.net",
+    "license": "MIT",
+    "description": "Asynchronous rabbitmq client for PHP based on workerman.",
+    "authors": [
+        {
+            "name": "walkor",
+            "email": "walkor@workerman.net",
+            "homepage": "http://www.workerman.net",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "email": "walkor@workerman.net",
+        "issues": "https://github.com/walkor/rabbitmq/issues",
+        "forum": "http://wenda.workerman.net/",
+        "wiki": "http://doc.workerman.net/",
+        "source": "https://github.com/walkor/rabbitmq"
+    },
     "require": {
         "workerman/workerman": "^4.0",
         "bunny/bunny": "^0.4"
