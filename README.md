@@ -1,5 +1,5 @@
 # Rabbitmq
-Asynchronous rabbitmq client for PHP based on workerman.
+Asynchronous rabbitmq client for PHP based on [workerman](https://github.com/walkor/workerman).
 
 # Install
 ```
