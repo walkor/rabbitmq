@@ -16,7 +16,7 @@ use Bunny\Message;
 use Workerman\Worker;
 use Workerman\RabbitMQ\Client;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 $worker = new Worker();
 
@@ -51,7 +51,7 @@ use Bunny\Message;
 use Workerman\Worker;
 use Workerman\RabbitMQ\Client;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 $worker = new Worker();
 
