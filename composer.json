@@ -24,7 +24,7 @@
         "source": "https://github.com/walkor/rabbitmq"
     },
     "require": {
-        "workerman/workerman": "^4.0",
+        "workerman/workerman": ">=3.3.0",
         "bunny/bunny": "^0.4"
     },
     "autoload": {
