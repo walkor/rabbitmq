@@ -40,6 +40,7 @@ $worker->onWorkerStart = function() {
         );
     });
 };
+Worker::runAll();
 ```
 Run command `php receive.php start`.
 
