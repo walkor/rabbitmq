@@ -1,5 +1,5 @@
 {
-    "name": "viras777/rabbitmq",
+    "name": "workerman/rabbitmq",
     "type": "library",
     "keywords": [
         "amqp",
