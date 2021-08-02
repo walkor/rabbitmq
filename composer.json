@@ -25,7 +25,7 @@
     },
     "require": {
         "workerman/workerman": ">=3.3.0",
-        "bunny/bunny": "^0.4"
+        "bunny/bunny": "^0.5"
     },
     "autoload": {
         "psr-4": {
