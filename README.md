@@ -37,8 +37,8 @@ $worker->onWorkerStart = function() {
             '',
             false,
             true
-        );
-    });
+        )->done();
+    })->done();
 };
 Worker::runAll();
 ```
@@ -75,8 +75,8 @@ $worker->onWorkerStart = function() {
             return $client;
         });
     })->then(function (Client $client) {
-        $client->disconnect();
-    });
+        $client->disconnect()->done();
+    })->done();
 };
 Worker::runAll();
 ```
