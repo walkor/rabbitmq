@@ -1,12 +1,12 @@
 <?php
 namespace Workerman\RabbitMQ;
 
+use Bunny\AbstractClient;
 use Bunny\ClientStateEnum;
 use Bunny\Exception\ClientException;
 use Bunny\Protocol\HeartbeatFrame;
 use Bunny\Protocol\MethodConnectionStartFrame;
 use Bunny\Protocol\MethodConnectionTuneFrame;
-use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use React\Promise;
 use Workerman\Events\EventInterface;
@@ -15,72 +15,20 @@ use Workerman\Lib\Timer;
 
 class Client extends \Bunny\Async\Client
 {
+    /** @var LoggerInterface */
+    protected $logger;
+
     /**
-     * Constructor.
-     *
+     * Client constructor.
      * @param array $options see {@link AbstractClient} for available options
-     * @param LoggerInterface $log if argument is passed, AMQP communication will be recorded in debug level
+     * @param LoggerInterface|null $logger
      */
-    public function __construct(array $options = [], LoggerInterface $log = null)
+    public function __construct(array $options = [], LoggerInterface $logger = null)
     {
-        $options["async"] = isset($options["async"]) ? $options["async"] : true;
+        $options['async'] = true;
+        $this->logger = $logger;
+        AbstractClient::__construct($options);
         $this->eventLoop = Worker::$globalEvent;
-        if (!isset($options["host"])) {
-            $options["host"] = "127.0.0.1";
-        }
-
-        if (!isset($options["port"])) {
-            $options["port"] = 5672;
-        }
-
-        if (!isset($options["vhost"])) {
-            if (isset($options["virtual_host"])) {
-                $options["vhost"] = $options["virtual_host"];
-                unset($options["virtual_host"]);
-            } elseif (isset($options["path"])) {
-                $options["vhost"] = $options["path"];
-                unset($options["path"]);
-            } else {
-                $options["vhost"] = "/";
-            }
-        }
-
-        if (!isset($options["user"])) {
-            if (isset($options["username"])) {
-                $options["user"] = $options["username"];
-                unset($options["username"]);
-            } else {
-                $options["user"] = "guest";
-            }
-        }
-
-        if (!isset($options["password"])) {
-            if (isset($options["pass"])) {
-                $options["password"] = $options["pass"];
-                unset($options["pass"]);
-            } else {
-                $options["password"] = "guest";
-            }
-        }
-
-        if (!isset($options["timeout"])) {
-            $options["timeout"] = 1;
-        }
-
-        if (!isset($options["heartbeat"])) {
-            $options["heartbeat"] = 60.0;
-        } elseif ($options["heartbeat"] >= 2**15) {
-            throw new InvalidArgumentException("Heartbeat too high: the value is a signed int16.");
-        }
-
-        if (is_callable($options['heartbeat_callback'] ?? null)) {
-            $this->options['heartbeat_callback'] = $options['heartbeat_callback'];
-        }
-
-        $this->options = $options;
-        $this->log = $log;
-
-        $this->init();
     }
 
     /**
@@ -162,7 +110,7 @@ class Client extends \Bunny\Async\Client
             return $this->connectionOpen($this->options["vhost"]);
 
         })->then(function () {
-            $this->heartbeatTimer = Timer::add($this->options["heartbeat"], [$this, "onHeartbeat"], null, true);
+            $this->heartbeatTimer = Timer::add($this->options["heartbeat"], [$this, "onHeartbeat"]);
 
             $this->state = ClientStateEnum::CONNECTED;
             return $this;
@@ -199,6 +147,11 @@ class Client extends \Bunny\Async\Client
                 $promises[] = $channel->close($replyCode, $replyText);
             }
         }
+        else{
+            foreach($this->channels as $channel){
+                $this->removeChannel($channel->getChannelId());
+            }
+        }
 
         if ($this->heartbeatTimer) {
             Timer::del($this->heartbeatTimer);
@@ -209,37 +162,52 @@ class Client extends \Bunny\Async\Client
             if (!empty($this->channels)) {
                 throw new \LogicException("All channels have to be closed by now.");
             }
-
+            if($replyCode !== 0){
+                return null;
+            }
             return $this->connectionClose($replyCode, $replyText, 0, 0);
-        })->then(function () {
+        })->then(function () use ($replyCode, $replyText){
             $this->eventLoop->del($this->getStream(), EventInterface::EV_READ);
             $this->closeStream();
             $this->init();
+            if($replyCode !== 0){
+                Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
+            }
             return $this;
         });
     }
-
 
     /**
      * Callback when heartbeat timer timed out.
      */
     public function onHeartbeat()
     {
-        $now = microtime(true);
-        $nextHeartbeat = ($this->lastWrite ?: $now) + $this->options["heartbeat"];
-
-        if ($now >= $nextHeartbeat) {
-            $this->writer->appendFrame(new HeartbeatFrame(), $this->writeBuffer);
-            $this->flushWriteBuffer()->done(function () {
-                $this->heartbeatTimer = Timer::add($this->options["heartbeat"], [$this, "onHeartbeat"], null, false);
+        $this->writer->appendFrame(new HeartbeatFrame(), $this->writeBuffer);
+        $this->flushWriteBuffer()->then(
+            function () {
+                if (is_callable(
+                    isset($this->options['heartbeat_callback'])
+                        ? $this->options['heartbeat_callback']
+                        : null
+                )) {
+//                    ($this->options['heartbeat_callback'])($this);
+                    $this->options['heartbeat_callback']->call($this);
+                }
+            },
+            function (\Throwable $throwable){
+                if($this->logger){
+                    $this->logger->debug(
+                        'OnHeartbeatFailed',
+                        [
+                            $throwable->getMessage(),
+                            $throwable->getCode(),
+                            $throwable->getFile(),
+                            $throwable->getLine()
+                        ]
+                    );
+                }
+                Worker::stopAll(0,"RabbitMQ client heartbeat failed: [{$throwable->getCode()}] {$throwable->getMessage()}");
             });
-
-            if (is_callable($this->options['heartbeat_callback'] ?? null)) {
-                $this->options['heartbeat_callback']->call($this);
-            }
-        } else {
-            $this->heartbeatTimer = Timer::add($nextHeartbeat - $now, [$this, "onHeartbeat"], null, false);
-        }
     }
 
 }
