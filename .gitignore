@@ -5,3 +5,4 @@ logs
 .idea
 .DS_Store
 vendor
+composer.lock
