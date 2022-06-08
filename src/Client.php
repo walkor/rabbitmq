@@ -110,7 +110,9 @@ class Client extends \Bunny\Async\Client
             return $this->connectionOpen($this->options["vhost"]);
 
         })->then(function () {
-            $this->heartbeatTimer = Timer::add($this->options["heartbeat"], [$this, "onHeartbeat"]);
+            if (isset($this->options["heartbeat"]) && $this->options["heartbeat"] > 0) {
+                $this->heartbeatTimer = Timer::add($this->options["heartbeat"], [$this, "onHeartbeat"]);
+            }
 
             $this->state = ClientStateEnum::CONNECTED;
             return $this;
