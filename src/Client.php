@@ -4,6 +4,7 @@ namespace Workerman\RabbitMQ;
 use Bunny\AbstractClient;
 use Bunny\ClientStateEnum;
 use Bunny\Exception\ClientException;
+use Bunny\Protocol\Buffer;
 use Bunny\Protocol\HeartbeatFrame;
 use Bunny\Protocol\MethodConnectionStartFrame;
 use Bunny\Protocol\MethodConnectionTuneFrame;
@@ -20,7 +21,17 @@ class Client extends \Bunny\Async\Client
 
     /**
      * Client constructor.
-     * @param array $options see {@link AbstractClient} for available options
+     * @param array $options = [
+     *  "host" => "127.0.0.1",
+     *  "port" => 5672,
+     *  "vhost" => "/",
+     *  "mechanism" => "AMQPLAIN"
+     *  "user" => "guest",
+     *  "password" => "guest",
+     *  "timeout" => 10,
+     *  "heartbeat" => 60,
+     *  "heartbeat_callback" => function(){}
+     * ] {@see AbstractClient::__construct()} and {@see \Workerman\RabbitMQ\Client::authResponse()}
      * @param LoggerInterface|null $logger
      */
     public function __construct(array $options = [], LoggerInterface $logger = null)
@@ -65,6 +76,36 @@ class Client extends \Bunny\Async\Client
             });
 
             return $this->flushWriteBufferPromise = $deferred->promise();
+        }
+    }
+
+    /**
+     * Override to support PLAIN mechanism
+     * @param MethodConnectionStartFrame $start
+     * @return bool|Promise\PromiseInterface
+     */
+    protected function authResponse(MethodConnectionStartFrame $start)
+    {
+        if (strpos($start->mechanisms, ($mechanism = $this->options['mechanism'] ?? 'AMQPLAIN')) === false) {
+            throw new ClientException("Server does not support {$this->options['mechanism']} mechanism (supported: {$start->mechanisms}).");
+        }
+
+        if($mechanism === 'PLAIN'){
+            return $this->connectionStartOk([], $mechanism, sprintf("\0%s\0%s", $this->options["user"], $this->options["password"]), "en_US");
+        }elseif($mechanism === 'AMQPLAIN'){
+
+            $responseBuffer = new Buffer();
+            $this->writer->appendTable([
+                "LOGIN" => $this->options["user"],
+                "PASSWORD" => $this->options["password"],
+            ], $responseBuffer);
+
+            $responseBuffer->discard(4);
+
+            return $this->connectionStartOk([], $mechanism, $responseBuffer->read($responseBuffer->getLength()), "en_US");
+        }else{
+
+            throw new ClientException("Client does not support {$mechanism} mechanism. ");
         }
     }
 
