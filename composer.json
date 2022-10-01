@@ -26,7 +26,7 @@
     "require": {
         "workerman/workerman": ">=3.3.0",
         "bunny/bunny": "^0.5",
-        "psr/log": "^1.0"
+        "psr/log": "^1.0 || ^2.0 || ^3.0"
     },
     "autoload": {
         "psr-4": {
