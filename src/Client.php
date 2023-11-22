@@ -29,6 +29,7 @@ class Client extends \Bunny\Async\Client
      *  "user" => "guest",
      *  "password" => "guest",
      *  "timeout" => 10,
+     *  "restart_interval" => 0,
      *  "heartbeat" => 60,
      *  "heartbeat_callback" => function(){}
      * ] {@see AbstractClient::__construct()} and {@see \Workerman\RabbitMQ\Client::authResponse()}
@@ -213,8 +214,20 @@ class Client extends \Bunny\Async\Client
             $this->eventLoop->del($this->getStream(), EventInterface::EV_READ);
             $this->closeStream();
             $this->init();
-            if($replyCode !== 0){
-                Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
+            if ($replyCode !== 0) {
+                if (($restartInterval = $this->options['restart_interval'] ?? 0) > 0) {
+                    Worker::log("RabbitMQ client will restart in $restartInterval seconds. ");
+                    $this->eventLoop->add(
+                        $restartInterval,
+                        EventInterface::EV_TIMER_ONCE,
+                        function () use ($replyCode, $replyText, $restartInterval) {
+                            Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
+                        }
+                    );
+                    return null;
+                } else {
+                    Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
+                }
             }
             return $this;
         });
