@@ -61,6 +61,17 @@ class Client extends \Bunny\Async\Client
     }
 
     /**
+     * 移除重启回调
+     *
+     * @return $this
+     */
+    public function unregisterRestartCallback(): Client
+    {
+        $this->restartCallback = null;
+        return $this;
+    }
+
+    /**
      * Asynchronously sends buffered data over the wire.
      *
      * - Calls {@link eventLoops}'s addWriteStream() with client's stream.
