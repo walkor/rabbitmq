@@ -19,6 +19,9 @@ class Client extends \Bunny\Async\Client
     /** @var LoggerInterface */
     protected $logger;
 
+    /** @var null|callable 重启事件回调 */
+    protected $restartCallback = null;
+
     /**
      * Client constructor.
      * @param array $options = [
@@ -41,6 +44,31 @@ class Client extends \Bunny\Async\Client
         $this->logger = $logger;
         AbstractClient::__construct($options);
         $this->eventLoop = Worker::$globalEvent;
+    }
+
+    /**
+     * 注册重启回调
+     *  - 回调函数的返回值应为 Promise\PromiseInterface|null
+     *  - 入参为当前client实例、replyCode、replyText
+     *
+     * @param callable $callback = function (Client $client, $replyCode, $replyText): Promise\PromiseInterface|null {}
+     * @return $this
+     */
+    public function registerRestartCallback(callable $callback): Client
+    {
+        $this->restartCallback = $callback;
+        return $this;
+    }
+
+    /**
+     * 移除重启回调
+     *
+     * @return $this
+     */
+    public function unregisterRestartCallback(): Client
+    {
+        $this->restartCallback = null;
+        return $this;
     }
 
     /**
@@ -170,7 +198,7 @@ class Client extends \Bunny\Async\Client
      *
      * @param int $replyCode
      * @param string $replyText
-     * @return Promise\PromiseInterface
+     * @return Promise\PromiseInterface|null
      */
     public function disconnect($replyCode = 0, $replyText = "")
     {
@@ -215,18 +243,28 @@ class Client extends \Bunny\Async\Client
             $this->closeStream();
             $this->init();
             if ($replyCode !== 0) {
-                if (($restartInterval = $this->options['restart_interval'] ?? 0) > 0) {
-                    Worker::log("RabbitMQ client will restart in $restartInterval seconds. ");
-                    $this->eventLoop->add(
-                        $restartInterval,
-                        EventInterface::EV_TIMER_ONCE,
-                        function () use ($replyCode, $replyText, $restartInterval) {
-                            Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
-                        }
-                    );
-                    return null;
-                } else {
-                    Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
+                // 触发重启事件回调
+                if ($this->restartCallback) {
+                    return call_user_func($this->restartCallback, $this, $replyCode, $replyText);
+                }
+                // 默认重启流程
+                else {
+                    // 延迟重启
+                    if (($restartInterval = $this->options['restart_interval'] ?? 0) > 0) {
+                        Worker::log("RabbitMQ client will restart in $restartInterval seconds. ");
+                        $this->eventLoop->add(
+                            $restartInterval,
+                            EventInterface::EV_TIMER_ONCE,
+                            function () use ($replyCode, $replyText, $restartInterval) {
+                                Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
+                            }
+                        );
+                        return null;
+                    }
+                    // 立即重启
+                    else {
+                        Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
+                    }
                 }
             }
             return $this;
