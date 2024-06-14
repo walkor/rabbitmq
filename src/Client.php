@@ -101,9 +101,12 @@ class Client extends \Bunny\Async\Client
                     $this->write();
 
                     if ($this->writeBuffer->isEmpty()) {
+                        // support workerman 5.x
                         if (method_exists($this->eventLoop, 'offWritable')) {
                             $this->eventLoop->offWritable($stream);
-                        } else {
+                        }
+                        // ver earlier than 5.x
+                        else {
                             $this->eventLoop->del($stream, EventInterface::EV_WRITE);
                         }
                         $this->flushWriteBufferPromise = null;
@@ -111,18 +114,24 @@ class Client extends \Bunny\Async\Client
                     }
 
                 } catch (\Exception $e) {
+                    // support workerman 5.x
                     if (method_exists($this->eventLoop, 'offWritable')) {
                         $this->eventLoop->offWritable($stream);
-                    } else {
+                    }
+                    // ver earlier than 5.x
+                    else {
                         $this->eventLoop->del($stream, EventInterface::EV_WRITE);
                     }
                     $this->flushWriteBufferPromise = null;
                     $deferred->reject($e);
                 }
             };
+            // support workerman 5.x
             if (method_exists($this->eventLoop, 'onWritable')) {
                 $this->eventLoop->onWritable($this->getStream(), $streamFunction);
-            } else {
+            }
+            // ver earlier than 5.x
+            else {
                 $this->eventLoop->add($this->getStream(), EventInterface::EV_WRITE, $streamFunction);
             }
             return $this->flushWriteBufferPromise = $deferred->promise();
@@ -176,9 +185,12 @@ class Client extends \Bunny\Async\Client
         $this->writer->appendProtocolHeader($this->writeBuffer);
 
         try {
+            // support workerman 5.x
             if (method_exists($this->eventLoop, 'onReadable')) {
                 $this->eventLoop->onReadable($this->getStream(), [$this, "onDataAvailable"]);
-            } else {
+            }
+            // ver earlier than 5.x
+            else {
                 $this->eventLoop->add($this->getStream(), EventInterface::EV_READ, [$this, "onDataAvailable"]);
             }
         } catch (\Exception $e) {
@@ -264,9 +276,12 @@ class Client extends \Bunny\Async\Client
             }
             return $this->connectionClose($replyCode, $replyText, 0, 0);
         })->then(function () use ($replyCode, $replyText){
+            // support workerman 5.x
             if (method_exists($this->eventLoop, 'offReadable')) {
                 $this->eventLoop->offReadable($this->getStream());
-            } else {
+            }
+            // ver earlier than 5.x
+            else {
                 $this->eventLoop->del($this->getStream(), EventInterface::EV_READ);
             }
             $this->closeStream();
@@ -285,9 +300,12 @@ class Client extends \Bunny\Async\Client
                         $timerFunction = function () use ($replyCode, $replyText, $restartInterval) {
                             Worker::stopAll(0,"RabbitMQ client disconnected: [{$replyCode}] {$replyText}");
                         };
+                        // support workerman 5.x
                         if (method_exists($this->eventLoop, 'delay')) {
                             $this->eventLoop->delay($restartInterval, $timerFunction);
-                        } else {
+                        }
+                        // ver earlier than 5.x
+                        else {
                             $this->eventLoop->add($restartInterval, EventInterface::EV_TIMER_ONCE, $timerFunction);
                         }
                         return null;
