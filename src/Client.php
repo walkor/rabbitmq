@@ -12,7 +12,7 @@ use Psr\Log\LoggerInterface;
 use React\Promise;
 use Workerman\Events\EventInterface;
 use Workerman\Worker;
-use Workerman\Lib\Timer;
+use Workerman\Timer;
 
 class Client extends \Bunny\Async\Client
 {
