@@ -14,6 +14,11 @@
             "email": "walkor@workerman.net",
             "homepage": "http://www.workerman.net",
             "role": "Developer"
+        },
+        {
+            "name": "chaz6chez",
+            "email": "chaz6chez1993@outlook.com",
+            "role": "Developer"
         }
     ],
     "support": {
@@ -24,9 +29,14 @@
         "source": "https://github.com/walkor/rabbitmq"
     },
     "require": {
-        "workerman/workerman": ">=3.3.0",
+        "php": "^8.0",
+        "workerman/workerman": "^5.0",
         "bunny/bunny": "^0.5",
         "psr/log": "^1.0 || ^2.0 || ^3.0"
+    },
+    "require-dev": {
+        "revolt/event-loop": "^1.0",
+        "symfony/var-dumper": "^6.0 | ^7.0"
     },
     "autoload": {
         "psr-4": {
