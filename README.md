@@ -24,7 +24,7 @@ use Workerman\RabbitMQ\Client;
 require_once __DIR__ . '/vendor/autoload.php';
 
 $worker = new Worker();
-$worker->eventLoop = \Workerman\Events\Revolt::class;
+$worker->eventLoop = \Workerman\Events\Fiber::class;
 
 $worker->onWorkerStart = function() {
     // Create RabbitMQ Client
@@ -81,7 +81,7 @@ use Workerman\Worker;
 require_once __DIR__ . '/vendor/autoload.php';
 
 $worker = new Worker();
-$worker->eventLoop = \Workerman\Events\Revolt::class;
+$worker->eventLoop = \Workerman\Events\Fiber::class;
 
 $worker->onWorkerStart = function() {
     $client = Client::factory([

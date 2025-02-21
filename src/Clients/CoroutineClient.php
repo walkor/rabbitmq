@@ -9,7 +9,7 @@ use Bunny\Protocol\HeartbeatFrame;
 use Bunny\Protocol\MethodConnectionStartFrame;
 use Composer\InstalledVersions;
 use Psr\Log\LoggerInterface;
-use Workerman\Events\Revolt;
+use Workerman\Events\Fiber;
 use Workerman\Events\Swoole;
 use Workerman\Events\Swow;
 use Workerman\RabbitMQ\Traits\LoggerMethods;
@@ -57,7 +57,7 @@ class CoroutineClient extends BaseSyncClient
             // after workerman start
             if ($this->workerman = Worker::$globalEvent !== null) {
                 $this->coroutine = in_array(Worker::$eventLoopClass, [
-                    Revolt::class, Swow::class, Swoole::class
+                    Fiber::class, Swow::class, Swoole::class
                 ]);
             }
         }
@@ -201,8 +201,8 @@ class CoroutineClient extends BaseSyncClient
     {
         $this->running = true;
         if ($this->workerman) {
-            if (Worker::$eventLoopClass !== Revolt::class) {
-                throw new \RuntimeException('CoroutineClient only support Revolt event loop');
+            if (Worker::$eventLoopClass !== Fiber::class) {
+                throw new \RuntimeException('CoroutineClient only support Fiber event loop');
             }
             // 可读事件
             Worker::$globalEvent->onReadable($this->getStream(), [$this, 'onDataAvailable']);

@@ -5,7 +5,7 @@
         "amqp",
         "rabbitmq client"
     ],
-    "homepage": "http://www.workerman.net",
+    "homepage": "https://www.workerman.net",
     "license": "MIT",
     "description": "Asynchronous rabbitmq client for PHP based on workerman.",
     "authors": [
@@ -29,7 +29,8 @@
         "source": "https://github.com/walkor/rabbitmq"
     },
     "require": {
-        "php": "^8.0",
+        "php": "^8.1",
+        "workerman/webman-framework": "^2.1 || dev-master",
         "workerman/workerman": "^5.0",
         "bunny/bunny": "^0.5",
         "psr/log": "^1.0 || ^2.0 || ^3.0"
