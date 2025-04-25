@@ -3,12 +3,12 @@ namespace Workerman\RabbitMQ\Clients;
 
 use Bunny\AbstractClient;
 use Bunny\Exception\ClientException;
-use Bunny\Protocol\AbstractFrame;
 use Bunny\Protocol\Buffer;
 use Bunny\Protocol\HeartbeatFrame;
 use Bunny\Protocol\MethodConnectionStartFrame;
 use Composer\InstalledVersions;
 use Psr\Log\LoggerInterface;
+use Workerman\Coroutine;
 use Workerman\Events\Fiber;
 use Workerman\Events\Swoole;
 use Workerman\Events\Swow;
@@ -55,10 +55,10 @@ class CoroutineClient extends BaseSyncClient
         // 安装了workerman
         if (InstalledVersions::isInstalled('workerman/workerman')) {
             // after workerman start
-            if ($this->workerman = Worker::$globalEvent !== null) {
+            if ($this->workerman = (Worker::$globalEvent !== null)) {
                 $this->coroutine = in_array(Worker::$eventLoopClass, [
                     Fiber::class, Swow::class, Swoole::class
-                ]);
+                ]) and InstalledVersions::isInstalled('workerman/coroutine');
             }
         }
         // 设置出让间隔
@@ -143,7 +143,6 @@ class CoroutineClient extends BaseSyncClient
 
                 $this->channels[$frame->channel]->onFrameReceived($frame);
             }
-            $this->sleep();
         }
     }
 
@@ -184,12 +183,19 @@ class CoroutineClient extends BaseSyncClient
      */
     protected function flushWriteBuffer(): bool
     {
-        while (!$this->writeBuffer->isEmpty()) {
-            $this->write();
-            $this->sleep();
+        if ($this->workerman and $this->coroutine) {
+            $barrier = Coroutine\Barrier::create();
+            Coroutine::create(function () use ($barrier) {
+                while (!$this->writeBuffer->isEmpty()) {
+                    $this->write();
+                    $this->sleep();
+                }
+            });
+            Coroutine\Barrier::wait($barrier);
+            return true;
+        } else {
+            return parent::flushWriteBuffer();
         }
-
-        return true;
     }
 
     /**

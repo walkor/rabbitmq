@@ -43,5 +43,8 @@
         "psr-4": {
             "Workerman\\RabbitMQ\\": "src/"
         }
+    },
+    "suggest": {
+        "workerman/coroutine": "For supporting Coroutine. "
     }
 }
