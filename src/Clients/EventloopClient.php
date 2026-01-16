@@ -39,7 +39,7 @@ class EventloopClient extends AsyncClient
      * ] {@see AbstractClient::__construct()} and {@see \Workerman\RabbitMQ\Client::authResponse()}
      * @param LoggerInterface|null $logger
      */
-    public function __construct(array $options = [], LoggerInterface $logger = null)
+    public function __construct(array $options = [], ?LoggerInterface $logger = null)
     {
         $options['async'] = true;
         $this->setLogger($logger);
